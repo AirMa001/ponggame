@@ -1,0 +1,73 @@
+<!-- test-client.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pong Test Client</title>
+  <style>
+    canvas {
+      background: #000;
+      display: block;
+      margin: 20px auto;
+    }
+  </style>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="message" style="text-align:center;color:red;font-size:20px;margin-top:10px;"></div>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const socket = io('http://localhost:3000');
+
+    let roomId = null;
+
+    socket.on('connect', () => {
+      console.log('Connected to server:', socket.id);
+    });
+
+    socket.on('matchFound', (data) => {
+      roomId = data.roomId;
+      console.log('Match found in room:', roomId);
+    });
+
+    socket.on('gameState', (state) => {
+      drawGame(state);
+    });
+
+    // Show message if opponent disconnects
+    socket.on('playerDisconnected', () => {
+      console.log('Opponent disconnected from server');
+      document.getElementById('message').textContent = 'Opponent disconnected from server. Please refresh to reconnect.';
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (roomId && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        const direction = e.key === 'ArrowUp' ? 'up' : 'down';
+        socket.emit('paddleMove', { roomId, direction });
+      }
+    });
+
+    function drawGame(state) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Ball
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(state.ball.x, state.ball.y, 10, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Paddles
+      ctx.fillRect(20, state.paddles.left.y, 10, 100);
+      ctx.fillRect(770, state.paddles.right.y, 10, 100);
+
+      // Score
+      ctx.font = '30px Arial';
+      ctx.fillText(state.score.left, 300, 50);
+      ctx.fillText(state.score.right, 470, 50);
+    }
+  </script>
+</body>
+</html>
